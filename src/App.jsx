@@ -20,33 +20,46 @@ const generateRandomBoard = () => {
 class App extends React.Component {
   state = {
     board: generateRandomBoard(),
-    currentPattern: [],
+    pattern: [],
   }
 
   handleLetterClick = (row, col, letter) => {
+    // If last letter was clicked?
+    if (this.state.pattern.length > 0) {
+      const lastCell = this.state.pattern[this.state.pattern.length - 1]
+      if (lastCell.row === row && lastCell.col === col) {
+        // Remove the last letter from the current pattern
+        this.setState({ pattern: this.state.pattern.slice(0, this.state.pattern.length - 1) })
+      }
+    }
+
     if (!this.isCellValid(row, col)) {
       return
     }
 
-    const newPattern = [...this.state.currentPattern, {
+    if (this.isCellSelected(row, col)) {
+      return
+    }
+
+    const newPattern = [...this.state.pattern, {
       letter,
       row,
       col,
     }]
 
-    this.setState({ currentPattern: newPattern })
+    this.setState({ pattern: newPattern })
   }
 
-  isCellSelected = (row, col) => !!this.state.currentPattern.find(({ row: r, col: c }) => r === row && c === col)
+  isCellSelected = (row, col) => !!this.state.pattern.find(({ row: r, col: c }) => r === row && c === col)
 
   isCellValid = (row, col) => {
-    const { currentPattern} = this.state
+    const { pattern} = this.state
 
-    if (currentPattern.length === 0) {
+    if (pattern.length === 0) {
       return true
     }
 
-    const lastCell = currentPattern[currentPattern.length - 1]
+    const lastCell = pattern[pattern.length - 1]
 
     const neighbors = []
     _.range(-1, 2).forEach(rowStep => {
@@ -132,7 +145,7 @@ class App extends React.Component {
   renderCurrentWord = () => {
     return (
       <div className={css(`font-size: 20pt; font-weight: bold; padding: 10px;`)}>
-        {this.state.currentPattern.map((letterInfo) => letterInfo.letter).join('')}
+        {this.state.pattern.map((letterInfo) => letterInfo.letter).join('')}
       </div>
     )
   }
