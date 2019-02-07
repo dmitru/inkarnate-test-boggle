@@ -1,6 +1,7 @@
 import React from 'react'
 import _ from 'lodash'
 import { css } from 'emotion'
+import { darken } from 'polished'
 import './App.css'
 
 import { DICES } from './constants'
@@ -19,7 +20,22 @@ const generateRandomBoard = () => {
 class App extends React.Component {
   state = {
     board: generateRandomBoard(),
+    currentPattern: [],
   }
+
+  handleLetterClick = (row, col, letter) => {
+    console.log('handleLetterClick', row, col, letter)
+    const newPattern = [...this.state.currentPattern, {
+      letter,
+      row,
+      col,
+    }]
+
+    this.setState({ currentPattern: newPattern })
+  }
+
+  isCellSelected = (row, col) => !!this.state.currentPattern.find(({ row: r, col: c }) => r === row && c === col)
+
 
   renderBoard = () => {
     const { board } = this.state
@@ -29,8 +45,16 @@ class App extends React.Component {
         {board.map((row, rowIndex) => (
           // eslint-disable-next-line react/no-array-index-key
           <div key={rowIndex} className={css(``)}>
-            {row.map((letter, colIndex) => (
+            {row.map((letter, colIndex) => {
+              let cellBackground = 'white'
+              if (this.isCellSelected(rowIndex, colIndex)) {
+                cellBackground = 'salmon'
+              }
+
+              return (
               <div
+                // TODO: disable invalid cells
+                onClick={() => this.handleLetterClick(rowIndex, colIndex, letter)}
                 // eslint-disable-next-line react/no-array-index-key
                 key={colIndex}
                 className={css(
@@ -43,23 +67,35 @@ class App extends React.Component {
                   cursor: pointer; 
                   width: 60px; height: 60px;
 
+                  background: ${cellBackground};
                   &:hover {
-                    background: #bbb;
+                    background: ${darken(0.1, cellBackground)};
                   }
                   `,
                 )}
               >
                 {letter}
               </div>
-            ))}
+            )})}
           </div>
         ))}
       </div>
     )
   }
 
+  renderCurrentWord = () => {
+    return (
+      <div className={css(`font-size: 20pt; font-weight: bold; padding: 10px;`)}>
+        {this.state.currentPattern.map((letterInfo) => letterInfo.letter).join('')}
+      </div>
+    )
+  }
+
   render() {
-    return <div>{this.renderBoard()}</div>
+    return <div>
+      {this.renderBoard()}
+      {this.renderCurrentWord()}
+      </div>
   }
 }
 
