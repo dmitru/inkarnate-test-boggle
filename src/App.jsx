@@ -18,7 +18,7 @@ const generateRandomBoard = () => {
   )
 }
 
-const checkWord = (word) => {
+const checkWord = word => {
   if (!word || word.length < 3) {
     return false
   }
@@ -49,6 +49,7 @@ class App extends React.Component {
 
     score: 0,
     usedPatternHashes: [],
+    usedWords: [],
   }
 
   handleSubmitWord = () => {
@@ -62,7 +63,11 @@ class App extends React.Component {
     // If it's not there:
     // - update score
     // - reset the pattern
-    const word = _.map(this.state.pattern, 'letter').join('')
+
+    // Mind the "Q rule"
+    const word = _.map(this.state.pattern, 'letter')
+      .join('')
+      .replace(/q/g, 'qu')
     const isWordValid = checkWord(word)
 
     const newScore = this.state.score + getScoreForWord(isWordValid, word.length)
@@ -71,6 +76,12 @@ class App extends React.Component {
       score: newScore,
       pattern: [],
     })
+
+    if (isWordValid) {
+      this.setState(state => ({
+        usedWords: [...state.usedWords, word],
+      }))
+    }
   }
 
   handleLetterClick = (row, col, letter) => {
@@ -91,19 +102,23 @@ class App extends React.Component {
       return
     }
 
-    const newPattern = [...this.state.pattern, {
-      letter,
-      row,
-      col,
-    }]
+    const newPattern = [
+      ...this.state.pattern,
+      {
+        letter,
+        row,
+        col,
+      },
+    ]
 
     this.setState({ pattern: newPattern })
   }
 
-  isCellSelected = (row, col) => !!this.state.pattern.find(({ row: r, col: c }) => r === row && c === col)
+  isCellSelected = (row, col) =>
+    !!this.state.pattern.find(({ row: r, col: c }) => r === row && c === col)
 
   isCellValid = (row, col) => {
-    const { pattern} = this.state
+    const { pattern } = this.state
 
     if (pattern.length === 0) {
       return true
@@ -134,7 +149,7 @@ class App extends React.Component {
       })
     })
 
-    const unusedNeighbors = neighbors.filter(({row, col}) => !this.isCellSelected({ row, col }))
+    const unusedNeighbors = neighbors.filter(({ row, col }) => !this.isCellSelected({ row, col }))
 
     return !!unusedNeighbors.find(({ row: r, col: c }) => r === row && c === col)
   }
@@ -151,20 +166,18 @@ class App extends React.Component {
               let cellBackground = 'white'
               if (this.isCellSelected(rowIndex, colIndex)) {
                 cellBackground = 'salmon'
-              } else 
-
-              if (!this.isCellValid(rowIndex, colIndex)) {
+              } else if (!this.isCellValid(rowIndex, colIndex)) {
                 cellBackground = 'gray'
               }
 
               return (
-              <div
-                // TODO: disable invalid cells
-                onClick={() => this.handleLetterClick(rowIndex, colIndex, letter)}
-                // eslint-disable-next-line react/no-array-index-key
-                key={colIndex}
-                className={css(
-                  `display: inline-flex; 
+                <div
+                  // TODO: disable invalid cells
+                  onClick={() => this.handleLetterClick(rowIndex, colIndex, letter)}
+                  // eslint-disable-next-line react/no-array-index-key
+                  key={colIndex}
+                  className={css(
+                    `display: inline-flex; 
                   align-items: center; 
                   justify-content: center;
                   padding: 20px; 
@@ -181,11 +194,12 @@ class App extends React.Component {
                     background: ${darken(0.1, cellBackground)};
                   }
                   `,
-                )}
-              >
-                {letter}
-              </div>
-            )})}
+                  )}
+                >
+                  {letter}
+                </div>
+              )
+            })}
           </div>
         ))}
       </div>
@@ -195,7 +209,7 @@ class App extends React.Component {
   renderCurrentWord = () => {
     return (
       <div className={css(`font-size: 20pt; font-weight: bold; padding: 10px;`)}>
-        {this.state.pattern.map((letterInfo) => letterInfo.letter).join('')}
+        {this.state.pattern.map(letterInfo => letterInfo.letter).join('')}
       </div>
     )
   }
@@ -205,18 +219,33 @@ class App extends React.Component {
 
     return (
       <div>
-        <button onClick={this.handleSubmitWord} disabled={isSubmitEnabled}>Submit</button>
+        <button onClick={this.handleSubmitWord} disabled={isSubmitEnabled}>
+          Submit
+        </button>
       </div>
     )
   }
 
   render() {
-    return <div>
-      {this.renderBoard()}
-      {this.renderCurrentWord()}
-      <div className={css(`font-size: 20px; padding: 10px; `)}>Score: {this.state.score}</div>
-      {this.renderToolbar()}
+    return (
+      <div>
+        {this.renderBoard()}
+        {this.renderCurrentWord()}
+        <div className={css(`font-size: 20px; padding: 10px; `)}>Score: {this.state.score}</div>
+        {this.renderToolbar()}
+
+        {this.state.usedWords.length > 0 && (
+          <div>
+            <h3>Words history:</h3>
+            <ul>
+              {this.state.usedWords.map((word, index) => (
+                <li key={index}>{`${word} (score: ${getScoreForWord(true, word.length)})`}</li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
+    )
   }
 }
 
