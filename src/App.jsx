@@ -5,6 +5,7 @@ import { darken } from 'polished'
 import './App.css'
 
 import { DICES } from './constants'
+import DICTIONARY from './data/words_dictionary.json'
 
 const generateRandomBoard = () => {
   const shuffledDice = _.shuffle(DICES)
@@ -17,10 +18,59 @@ const generateRandomBoard = () => {
   )
 }
 
+const checkWord = (word) => {
+  if (!word || word.length < 3) {
+    return false
+  }
+
+  return DICTIONARY[word] === 1
+}
+
+const getScoreForWord = (isValid, wordLength) => {
+  if (!isValid) {
+    return -2
+  }
+
+  const SCORE_MAP = {
+    '3': 1,
+    '4': 1,
+    '5': 2,
+    '6': 3,
+    '7': 5,
+  }
+
+  return SCORE_MAP[wordLength] || 11
+}
+
 class App extends React.Component {
   state = {
     board: generateRandomBoard(),
     pattern: [],
+
+    score: 0,
+    usedPatternHashes: [],
+  }
+
+  handleSubmitWord = () => {
+    // Check the word against dictionary
+    //
+    // If it's there:
+    // - save used pattern
+    // - update score
+    // - reset the pattern
+
+    // If it's not there:
+    // - update score
+    // - reset the pattern
+    const word = _.map(this.state.pattern, 'letter').join('')
+    const isWordValid = checkWord(word)
+
+    const newScore = this.state.score + getScoreForWord(isWordValid, word.length)
+
+    this.setState({
+      score: newScore,
+      pattern: [],
+    })
   }
 
   handleLetterClick = (row, col, letter) => {
@@ -150,10 +200,22 @@ class App extends React.Component {
     )
   }
 
+  renderToolbar = () => {
+    const isSubmitEnabled = this.state.pattern.length < 3
+
+    return (
+      <div>
+        <button onClick={this.handleSubmitWord} disabled={isSubmitEnabled}>Submit</button>
+      </div>
+    )
+  }
+
   render() {
     return <div>
       {this.renderBoard()}
       {this.renderCurrentWord()}
+      <div className={css(`font-size: 20px; padding: 10px; `)}>Score: {this.state.score}</div>
+      {this.renderToolbar()}
       </div>
   }
 }
