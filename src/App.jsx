@@ -24,7 +24,10 @@ class App extends React.Component {
   }
 
   handleLetterClick = (row, col, letter) => {
-    console.log('handleLetterClick', row, col, letter)
+    if (!this.isCellValid(row, col)) {
+      return
+    }
+
     const newPattern = [...this.state.currentPattern, {
       letter,
       row,
@@ -36,6 +39,42 @@ class App extends React.Component {
 
   isCellSelected = (row, col) => !!this.state.currentPattern.find(({ row: r, col: c }) => r === row && c === col)
 
+  isCellValid = (row, col) => {
+    const { currentPattern} = this.state
+
+    if (currentPattern.length === 0) {
+      return true
+    }
+
+    const lastCell = currentPattern[currentPattern.length - 1]
+
+    const neighbors = []
+    _.range(-1, 2).forEach(rowStep => {
+      _.range(-1, 2).forEach(colStep => {
+        const neighborRow = lastCell.row + rowStep
+        const neighborCol = lastCell.col + colStep
+        if (neighborRow > 4 || neighborRow < 0) {
+          return
+        }
+        if (neighborCol > 4 || neighborCol < 0) {
+          return
+        }
+
+        if (rowStep === 0 && colStep === 0) {
+          return
+        }
+
+        neighbors.push({
+          row: neighborRow,
+          col: neighborCol,
+        })
+      })
+    })
+
+    const unusedNeighbors = neighbors.filter(({row, col}) => !this.isCellSelected({ row, col }))
+
+    return !!unusedNeighbors.find(({ row: r, col: c }) => r === row && c === col)
+  }
 
   renderBoard = () => {
     const { board } = this.state
@@ -49,6 +88,10 @@ class App extends React.Component {
               let cellBackground = 'white'
               if (this.isCellSelected(rowIndex, colIndex)) {
                 cellBackground = 'salmon'
+              } else 
+
+              if (!this.isCellValid(rowIndex, colIndex)) {
+                cellBackground = 'gray'
               }
 
               return (
@@ -68,6 +111,9 @@ class App extends React.Component {
                   width: 60px; height: 60px;
 
                   background: ${cellBackground};
+
+                  transition: background 0.3s;
+
                   &:hover {
                     background: ${darken(0.1, cellBackground)};
                   }
