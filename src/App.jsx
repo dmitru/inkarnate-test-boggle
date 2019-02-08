@@ -51,6 +51,16 @@ const getScoreForWord = (isValid, word) => {
   return SCORE_MAP[wordLength] || 11
 }
 
+const Timer = ({ secondsLeft }) => {
+  const minutes = Math.floor(secondsLeft / 60)
+  const seconds = secondsLeft - 60 * minutes
+  return (
+    <div className={css(`font-size: 20px; padding: 10px;`)}>
+      {`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`}
+    </div>
+  )
+}
+
 class App extends React.Component {
   state = {
     board: generateRandomBoard(),
@@ -61,6 +71,35 @@ class App extends React.Component {
     // TODO: can just store used patterns and derive these 2 from that state
     usedPatternHashes: [],
     usedWords: [],
+
+    secondsLeft: 3,
+    isGameFinished: false,
+  }
+
+  componentDidMount() {
+    // It's not precise, but for the purposes of this app, IMHO it's good enough
+    this.intervalHandle = setInterval(this.handleTimerUpdate, 1000)
+  }
+
+  componentWillUnmount() {
+    if (this.intervalHandle) {
+      clearInterval(this.intervalHandle)
+    }
+  }
+
+  handleTimerUpdate = () => {
+    if (this.state.isGameFinished) {
+      return
+    }
+
+    // Assuming this will be called every second...
+    this.setState(state => {
+      if (state.secondsLeft === 0) {
+        this.setState({ isGameFinished: true })
+      } else {
+        this.setState({ secondsLeft: state.secondsLeft - 1 })
+      }
+    })
   }
 
   handleSubmitWord = () => {
@@ -250,9 +289,13 @@ class App extends React.Component {
     )
   }
 
+  // TODO: reformat to MM:SS
+  renderTimer = () => <Timer secondsLeft={this.state.secondsLeft} />
+
   render() {
     return (
       <div>
+        {this.renderTimer()}
         {this.renderBoard()}
         {this.renderCurrentWord()}
         <div className={css(`font-size: 20px; padding: 10px; `)}>Score: {this.state.score}</div>
