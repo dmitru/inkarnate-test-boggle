@@ -18,13 +18,20 @@ const generateRandomBoard = () => {
   )
 }
 
+const getWordLength = word => {
+  const wordBeforeQTransform = word.replace(/qu/g, 'q')
+  return wordBeforeQTransform.length
+}
+
 const checkWord = word => {
-  if (!word || word.length < 3) {
+  if (!word || getWordLength(word) < 3) {
     return false
   }
 
   return DICTIONARY[word] === 1
 }
+
+const getPatternHash = (pattern) => pattern.map(({ row, col }) => `${row}:${col}`).join('-')
 
 const getScoreForWord = (isValid, wordLength) => {
   if (!isValid) {
@@ -48,6 +55,8 @@ class App extends React.Component {
     pattern: [],
 
     score: 0,
+
+    // TODO: can just store used patterns and derive these 2 from that state
     usedPatternHashes: [],
     usedWords: [],
   }
@@ -65,12 +74,20 @@ class App extends React.Component {
     // - reset the pattern
 
     // Mind the "Q rule"
-    const word = _.map(this.state.pattern, 'letter')
+    const pattern = this.state.pattern
+    const patternHash = getPatternHash(pattern)
+
+    const word = _.map(pattern, 'letter')
       .join('')
       .replace(/q/g, 'qu')
-    const isWordValid = checkWord(word)
 
-    const newScore = this.state.score + getScoreForWord(isWordValid, word.length)
+    const isWordValid = checkWord(word)
+    const isPatternValid = !this.state.usedPatternHashes.find(hash => hash === patternHash)
+
+    const isValid = isWordValid && isPatternValid
+
+    const wordScore = getScoreForWord(isValid, word.length)
+    const newScore = this.state.score + wordScore
 
     this.setState({
       score: newScore,
@@ -79,7 +96,16 @@ class App extends React.Component {
 
     if (isWordValid) {
       this.setState(state => ({
-        usedWords: [...state.usedWords, word],
+        usedWords: [...state.usedWords, {
+          word,
+          score: wordScore,
+         }],
+      }))
+    }
+
+    if (isValid) {
+      this.setState(state => ({
+        usedPatternHashes: [...state.usedPatternHashes, patternHash],
       }))
     }
   }
@@ -238,8 +264,8 @@ class App extends React.Component {
           <div>
             <h3>Words history:</h3>
             <ul>
-              {this.state.usedWords.map((word, index) => (
-                <li key={index}>{`${word} (score: ${getScoreForWord(true, word.length)})`}</li>
+              {this.state.usedWords.map(({ word, score }, index) => (
+                <li key={index}>{`${word} (score: ${score})`}</li>
               ))}
             </ul>
           </div>
