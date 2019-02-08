@@ -31,7 +31,7 @@ const checkWord = word => {
   return DICTIONARY[getTransformedWord(word)] === 1
 }
 
-const getPatternHash = (pattern) => pattern.map(({ row, col }) => `${row}:${col}`).join('-')
+const getPatternHash = pattern => pattern.map(({ row, col }) => `${row}:${col}`).join('-')
 
 const getScoreForWord = (isValid, word) => {
   if (!isValid) {
@@ -61,20 +61,25 @@ const Timer = ({ secondsLeft }) => {
   )
 }
 
+const createDefaultState = () => ({
+  board: generateRandomBoard(),
+  pattern: [],
+
+  score: 0,
+
+  // TODO: can just store used patterns and derive these 2 from that state
+  usedPatternHashes: [],
+  usedWords: [],
+
+  secondsLeft: 30,
+  isGameFinished: false,
+
+  // Top 10 scores, [{ name, score }, ...], sorted by score
+  topScores: [],
+})
+
 class App extends React.Component {
-  state = {
-    board: generateRandomBoard(),
-    pattern: [],
-
-    score: 0,
-
-    // TODO: can just store used patterns and derive these 2 from that state
-    usedPatternHashes: [],
-    usedWords: [],
-
-    secondsLeft: 3,
-    isGameFinished: false,
-  }
+  state = createDefaultState()
 
   componentDidMount() {
     // It's not precise, but for the purposes of this app, IMHO it's good enough
@@ -87,6 +92,13 @@ class App extends React.Component {
     }
   }
 
+  handleGameRestart = () => {
+    this.setState(state => ({
+      ...createDefaultState(),
+      topScores: state.topScores,
+    }))
+  }
+
   handleTimerUpdate = () => {
     if (this.state.isGameFinished) {
       return
@@ -95,11 +107,26 @@ class App extends React.Component {
     // Assuming this will be called every second...
     this.setState(state => {
       if (state.secondsLeft === 0) {
-        this.setState({ isGameFinished: true })
+        this.handleGameFinished()
       } else {
         this.setState({ secondsLeft: state.secondsLeft - 1 })
       }
     })
+  }
+
+  handleGameFinished = () => {
+    const { score, topScores } = this.state
+    const name =
+      prompt(`Game is finished! Your final score is ${score}. What is your name?`, 'New player') ||
+      'New player'
+
+    // Update the scoreboard if needed
+    const newTopScores = _.sortBy(
+      [...topScores, { name, score }],
+      scoreEntry => -scoreEntry.score,
+    ).slice(0, 10)
+
+    this.setState({ topScores: newTopScores, isGameFinished: true })
   }
 
   handleSubmitWord = () => {
@@ -134,10 +161,13 @@ class App extends React.Component {
     })
 
     this.setState(state => ({
-      usedWords: [...state.usedWords, {
-        word,
-        score: wordScore,
-        }],
+      usedWords: [
+        ...state.usedWords,
+        {
+          word,
+          score: wordScore,
+        },
+      ],
     }))
 
     if (isValid) {
@@ -235,7 +265,6 @@ class App extends React.Component {
 
               return (
                 <div
-                  // TODO: disable invalid cells
                   onClick={() => this.handleLetterClick(rowIndex, colIndex, letter)}
                   // eslint-disable-next-line react/no-array-index-key
                   key={colIndex}
@@ -289,10 +318,9 @@ class App extends React.Component {
     )
   }
 
-  // TODO: reformat to MM:SS
   renderTimer = () => <Timer secondsLeft={this.state.secondsLeft} />
 
-  render() {
+  renderGameScreen = () => {
     return (
       <div>
         {this.renderTimer()}
@@ -312,6 +340,31 @@ class App extends React.Component {
           </div>
         )}
       </div>
+    )
+  }
+
+  renderScoreboardScreen = () => {
+    return (
+      <div>
+        <h2>Top 10 Players</h2>
+        <ol>{this.state.topScores.map((scoreEntry, index) => (
+          <li key={index}>
+            {`${scoreEntry.name} - ${scoreEntry.score}`}
+          </li>
+        ))}</ol>
+      </div>
+    )
+  }
+
+  render() {
+    return (
+      <div>
+        <h1>Boggle Game</h1>
+        <button onClick={this.handleGameRestart}>Start again</button>
+        {
+          this.state.isGameFinished ? this.renderScoreboardScreen() : this.renderGameScreen()
+        }
+        </div>
     )
   }
 }
