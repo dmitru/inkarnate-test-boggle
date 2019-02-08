@@ -18,25 +18,27 @@ const generateRandomBoard = () => {
   )
 }
 
-const getWordLength = word => {
-  const wordBeforeQTransform = word.replace(/qu/g, 'q')
-  return wordBeforeQTransform.length
-}
+// Replaces "q"s with "qu"s
+const getTransformedWord = word => word.replace(/q/g, 'qu')
+
+const getWordLength = word => word.length
 
 const checkWord = word => {
   if (!word || getWordLength(word) < 3) {
     return false
   }
 
-  return DICTIONARY[word] === 1
+  return DICTIONARY[getTransformedWord(word)] === 1
 }
 
 const getPatternHash = (pattern) => pattern.map(({ row, col }) => `${row}:${col}`).join('-')
 
-const getScoreForWord = (isValid, wordLength) => {
+const getScoreForWord = (isValid, word) => {
   if (!isValid) {
     return -2
   }
+
+  const wordLength = getWordLength(word)
 
   const SCORE_MAP = {
     '3': 1,
@@ -77,16 +79,14 @@ class App extends React.Component {
     const pattern = this.state.pattern
     const patternHash = getPatternHash(pattern)
 
-    const word = _.map(pattern, 'letter')
-      .join('')
-      .replace(/q/g, 'qu')
+    const word = _.map(pattern, 'letter').join('')
 
     const isWordValid = checkWord(word)
     const isPatternValid = !this.state.usedPatternHashes.find(hash => hash === patternHash)
 
     const isValid = isWordValid && isPatternValid
 
-    const wordScore = getScoreForWord(isValid, word.length)
+    const wordScore = getScoreForWord(isValid, word)
     const newScore = this.state.score + wordScore
 
     this.setState({
@@ -94,14 +94,12 @@ class App extends React.Component {
       pattern: [],
     })
 
-    if (isWordValid) {
-      this.setState(state => ({
-        usedWords: [...state.usedWords, {
-          word,
-          score: wordScore,
-         }],
-      }))
-    }
+    this.setState(state => ({
+      usedWords: [...state.usedWords, {
+        word,
+        score: wordScore,
+        }],
+    }))
 
     if (isValid) {
       this.setState(state => ({
@@ -235,7 +233,7 @@ class App extends React.Component {
   renderCurrentWord = () => {
     return (
       <div className={css(`font-size: 20pt; font-weight: bold; padding: 10px;`)}>
-        {this.state.pattern.map(letterInfo => letterInfo.letter).join('')}
+        {getTransformedWord(this.state.pattern.map(letterInfo => letterInfo.letter).join(''))}
       </div>
     )
   }
@@ -265,7 +263,7 @@ class App extends React.Component {
             <h3>Words history:</h3>
             <ul>
               {this.state.usedWords.map(({ word, score }, index) => (
-                <li key={index}>{`${word} (score: ${score})`}</li>
+                <li key={index}>{`${getTransformedWord(word)} (score: ${score})`}</li>
               ))}
             </ul>
           </div>
